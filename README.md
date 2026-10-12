@@ -56,11 +56,18 @@ wb-connect listening on http://127.0.0.1:8787/v1
   routes   : GET /v1/models - POST /v1/chat/completions - GET /healthz
 ```
 
-**或者：双击项目根目录的 `start-bridge.cmd`。**
+**或者：双击项目根目录的 `start-bridge.cmd`（推荐日常使用）。**
 
-脚本在启动前会检查 Node.js 是否可用、是否位于项目根目录、桥是否已在运行；随后以窗口方式启动桥，窗口内是实时日志，**关闭窗口即停止桥**。常见问题（Node.js 缺失、重复启动、端口占用）都会给出可读提示，而不是一屏堆栈。
+脚本会先检查 Node.js 是否可用、是否位于项目根目录、桥是否已在运行，然后让桥运行在**独立的后台控制台**中并立即退出——**这个窗口可以随手关掉，桥不受影响**。启动日志写入项目根目录的 `bridge.log`。
 
-> 脚本内的提示信息是英文的：cmd.exe 用 OEM 代码页解析批处理文件，在其中写非 ASCII 文本会导致解析错乱，因此刻意保持 ASCII。
+| 脚本 | 作用 |
+|------|------|
+| `start-bridge.cmd` | 后台启动桥，窗口可关闭 |
+| `stop-bridge.cmd` | 停止桥 |
+
+常见问题（Node.js 缺失、重复启动、端口占用）都会给出可读提示，而不是一屏堆栈。自启场景用 `start-bridge.cmd quiet` 调用，跳过末尾的按键等待（见「服务保持」）。
+
+> 两个脚本的提示信息都是英文：cmd.exe 用 OEM 代码页解析批处理文件，在其中写非 ASCII 文本会导致解析错乱，因此刻意保持 ASCII。
 
 ### 2. 配置 OpenCode / OpenChamber
 
@@ -151,7 +158,7 @@ WorkBuddy AI  (workbuddy-ai)
 
 ### 创建启动项
 
-自启项直接指向项目内的 `start-bridge.cmd`——它自己会切换到所在目录，因此**不需要 `npm link`**，也不依赖全局命令。把 `<项目目录>` 换成实际路径后执行：
+自启项直接指向项目内的 `start-bridge.cmd`——它自己会切换到所在目录，因此**不需要 `npm link`**，也不依赖全局命令。参数 `quiet` 跳过末尾的按键等待。把 `<项目目录>` 换成实际路径后执行：
 
 ```powershell
 $projectDir = "<项目目录>"
@@ -159,13 +166,14 @@ $startup = [Environment]::GetFolderPath('Startup')
 $ws = New-Object -ComObject WScript.Shell
 $lnk = $ws.CreateShortcut("$startup\wb-connect.lnk")
 $lnk.TargetPath       = "$projectDir\start-bridge.cmd"
+$lnk.Arguments        = "quiet"
 $lnk.WorkingDirectory = $projectDir
-$lnk.WindowStyle      = 7          # 7 = 最小化，避免遮挡桌面
+$lnk.WindowStyle      = 7          # 7 = 最小化，减少启动瞬间的视觉干扰
 $lnk.Description      = "WorkBuddy bridge for OpenCode / OpenChamber"
 $lnk.Save()
 ```
 
-`WindowStyle = 7` 让窗口以最小化方式启动。注意快捷方式**不会**完全隐藏窗口，任务栏仍会有一个最小化图标；这是 D2 方案相对后台服务的取舍。
+因为桥运行在独立的后台控制台，启动器窗口在登录时会一闪而过然后自行退出，**任务栏不会留下常驻图标**。
 
 ### 验证
 
