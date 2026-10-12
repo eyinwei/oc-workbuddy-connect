@@ -56,6 +56,12 @@ wb-connect listening on http://127.0.0.1:8787/v1
   routes   : GET /v1/models - POST /v1/chat/completions - GET /healthz
 ```
 
+**或者：双击项目根目录的 `start-bridge.cmd`。**
+
+脚本在启动前会检查 Node.js 是否可用、是否位于项目根目录、桥是否已在运行；随后以窗口方式启动桥，窗口内是实时日志，**关闭窗口即停止桥**。常见问题（Node.js 缺失、重复启动、端口占用）都会给出可读提示，而不是一屏堆栈。
+
+> 脚本内的提示信息是英文的：cmd.exe 用 OEM 代码页解析批处理文件，在其中写非 ASCII 文本会导致解析错乱，因此刻意保持 ASCII。
+
 ### 2. 配置 OpenCode / OpenChamber
 
 有两种等价方式，**任选其一**，二者写入的是同一份 provider 配置。
@@ -143,26 +149,16 @@ WorkBuddy AI  (workbuddy-ai)
 
 最小成本的解决方式是把桥放进开机启动文件夹（下称 **D2 方案**），登录 Windows 后自动以后台方式运行。
 
-### 前置：装好全局命令
-
-自启项指向全局命令 `%APPDATA%\npm\wb-connect.cmd`，因此需要先注册（作用见「安装」一节）：
-
-```bash
-cd <项目目录>
-npm link
-```
-
 ### 创建启动项
 
-在项目目录下执行（把 `<项目目录>` 换成实际路径）：
+自启项直接指向项目内的 `start-bridge.cmd`——它自己会切换到所在目录，因此**不需要 `npm link`**，也不依赖全局命令。把 `<项目目录>` 换成实际路径后执行：
 
 ```powershell
 $projectDir = "<项目目录>"
 $startup = [Environment]::GetFolderPath('Startup')
 $ws = New-Object -ComObject WScript.Shell
 $lnk = $ws.CreateShortcut("$startup\wb-connect.lnk")
-$lnk.TargetPath       = "$env:APPDATA\npm\wb-connect.cmd"
-$lnk.Arguments        = "serve --port 8787"
+$lnk.TargetPath       = "$projectDir\start-bridge.cmd"
 $lnk.WorkingDirectory = $projectDir
 $lnk.WindowStyle      = 7          # 7 = 最小化，避免遮挡桌面
 $lnk.Description      = "WorkBuddy bridge for OpenCode / OpenChamber"

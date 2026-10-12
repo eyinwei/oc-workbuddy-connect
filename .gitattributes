@@ -1,0 +1,3 @@
+# cmd.exe mis-parses batch files that use LF line endings (it splits lines in
+# the wrong places, mangling commands). Keep them CRLF in every checkout.
+*.cmd text eol=crlf
