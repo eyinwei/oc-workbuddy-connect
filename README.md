@@ -31,7 +31,7 @@ npm install -g oc-workbuddy-connect
 或从源码运行：
 
 ```bash
-git clone https://github.com/your-org/oc-workbuddy-connect.git
+git clone https://github.com/eyinwei/oc-workbuddy-connect.git
 cd oc-workbuddy-connect
 npm link              # 注册全局 wb-connect 命令
 wb-connect --help

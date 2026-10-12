@@ -13,6 +13,15 @@
   ],
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eyinwei/oc-workbuddy-connect.git"
+  },
+  "homepage": "https://github.com/eyinwei/oc-workbuddy-connect#readme",
+  "bugs": {
+    "url": "https://github.com/eyinwei/oc-workbuddy-connect/issues"
+  },
+  "author": "Wey <43311626+eyinwei@users.noreply.github.com>",
   "engines": {
     "node": ">=20.6.0"
   },
