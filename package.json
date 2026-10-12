@@ -1,0 +1,41 @@
+{
+  "name": "oc-workbuddy-connect",
+  "version": "1.0.0",
+  "description": "Bring WorkBuddy (CN) and WorkBuddy AI (international) desktop models into OpenCode / OpenChamber through a local OpenAI-compatible bridge. Zero runtime dependencies.",
+  "keywords": [
+    "workbuddy",
+    "workbuddy-ai",
+    "opencode",
+    "openchamber",
+    "openai-compatible",
+    "proxy",
+    "codebuddy"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "bin": {
+    "wb-connect": "bin/wb-connect.js"
+  },
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin",
+    "src",
+    "examples",
+    "README.md",
+    "README.en.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/",
+    "doctor": "node bin/wb-connect.js doctor"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

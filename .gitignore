@@ -1,0 +1,4 @@
+node_modules/
+.openchamber/
+*.log
+.DS_Store
