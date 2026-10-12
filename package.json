@@ -27,13 +27,11 @@
   "files": [
     "bin",
     "src",
-    "examples",
     "README.md",
-    "README.en.md",
     "LICENSE"
   ],
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test \"test/*.test.mjs\"",
     "doctor": "node bin/wb-connect.js doctor"
   },
   "dependencies": {},

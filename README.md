@@ -33,8 +33,11 @@ npm install -g oc-workbuddy-connect
 ```bash
 git clone https://github.com/your-org/oc-workbuddy-connect.git
 cd oc-workbuddy-connect
-node bin/wb-connect.js --help
+npm link              # 注册全局 wb-connect 命令
+wb-connect --help
 ```
+
+`npm link` 会把全局命令链接到源码目录（本项目零运行时依赖，不会安装额外包）。如果不想注册全局命令，也可以直接用 `node bin/wb-connect.js <命令>` 调用，后文所有 `wb-connect xxx` 均等价于 `node bin/wb-connect.js xxx`。
 
 ## 快速开始
 
@@ -55,11 +58,54 @@ wb-connect listening on http://127.0.0.1:8787/v1
 
 ### 2. 配置 OpenCode / OpenChamber
 
+有两种等价方式，**任选其一**，二者写入的是同一份 provider 配置。
+
+#### 方式 A：命令行（推荐）
+
 ```bash
 wb-connect install
 ```
 
 这会将 `workbuddy` 和 `workbuddy-ai` 两个 provider 写入 OpenCode 的配置文件（OpenChamber 会自动检测 `OPENCODE_CONFIG` 环境变量）。写入后重启 OpenCode / OpenChamber，模型选择器中即出现 WorkBuddy 与 WorkBuddy AI 分组。
+
+#### 方式 B：OpenChamber 界面
+
+不想敲命令时，可以在 OpenChamber 里手动添加。路径：**设置 → 提供商 → 自定义提供商**。
+
+依次添加两个 provider，字段值如下。
+
+**第一个：**
+
+| 字段 | 值 |
+|------|-----|
+| 提供商 ID | `workbuddy` |
+| 显示名称 | `WorkBuddy` |
+| API 协议 | **OpenAI Chat Completions** |
+| 基础 URL | `http://127.0.0.1:8787/v1` |
+| API 密钥 | 桥的 `--api-key` 值；桥未设密钥时填任意非空占位值 |
+| 请求头 | `x-workbuddy-variant` = `workbuddy` |
+
+**第二个：**
+
+| 字段 | 值 |
+|------|-----|
+| 提供商 ID | `workbuddy-ai` |
+| 显示名称 | `WorkBuddy AI` |
+| API 协议 | **OpenAI Chat Completions** |
+| 基础 URL | `http://127.0.0.1:8787/v1` |
+| API 密钥 | 同上 |
+| 请求头 | `x-workbuddy-variant` = `workbuddy-ai` |
+
+模型列表可以点击界面里的「查找模型」自动拉取，也可以手动填写。若「查找模型」拉到的列表把两个产品的模型混在了一起，改用模型 ID 前缀写法即可区分：
+
+```
+workbuddy/<model>       例如 workbuddy/claude-sonnet-4
+workbuddy-ai/<model>    例如 workbuddy-ai/kimi-k3
+```
+
+> **请求头不能省。** 桥靠 `x-workbuddy-variant` 判断请求属于国内版还是国际版；不带该请求头时，桥无法确定产品，请求会失败。两个 provider 共用同一个地址、同一个端口，仅靠这个请求头分流。
+
+> **前提：桥必须已在运行。** 方式 A 与方式 B 都只是写入配置，不会启动桥。若 `wb-connect serve` 没在跑，配置再正确，模型列表也是空的，调用会报 `provider.auth` 错误。见下一节「服务保持」。
 
 ### 3. 验证
 
@@ -86,6 +132,76 @@ WorkBuddy AI  (workbuddy-ai)
 
 2 of 2 products ready.
 ```
+
+## 服务保持（开机自启）
+
+桥是一个常驻的本地 HTTP 进程。**OpenChamber 不会自动拉起它**——provider 配置里只有地址，没有进程管理能力。因此以下情况都会导致模型不可用，报错通常表现为 `provider.auth` 或连接失败：
+
+- 关闭了运行 `wb-connect serve` 的终端窗口
+- 重启了 OpenChamber，但桥仍是上一次的进程
+- 重启了电脑
+
+最小成本的解决方式是把桥放进开机启动文件夹（下称 **D2 方案**），登录 Windows 后自动以后台方式运行。
+
+### 前置：装好全局命令
+
+自启项指向全局命令 `%APPDATA%\npm\wb-connect.cmd`，因此需要先注册（作用见「安装」一节）：
+
+```bash
+cd <项目目录>
+npm link
+```
+
+### 创建启动项
+
+在项目目录下执行（把 `<项目目录>` 换成实际路径）：
+
+```powershell
+$projectDir = "<项目目录>"
+$startup = [Environment]::GetFolderPath('Startup')
+$ws = New-Object -ComObject WScript.Shell
+$lnk = $ws.CreateShortcut("$startup\wb-connect.lnk")
+$lnk.TargetPath       = "$env:APPDATA\npm\wb-connect.cmd"
+$lnk.Arguments        = "serve --port 8787"
+$lnk.WorkingDirectory = $projectDir
+$lnk.WindowStyle      = 7          # 7 = 最小化，避免遮挡桌面
+$lnk.Description      = "WorkBuddy bridge for OpenCode / OpenChamber"
+$lnk.Save()
+```
+
+`WindowStyle = 7` 让窗口以最小化方式启动。注意快捷方式**不会**完全隐藏窗口，任务栏仍会有一个最小化图标；这是 D2 方案相对后台服务的取舍。
+
+### 验证
+
+注销并重新登录 Windows（或直接双击刚生成的快捷方式），然后：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8787/healthz
+```
+
+返回中包含 `"status": "ok"` 即表示桥已随登录启动：
+
+```json
+{
+  "status": "ok",
+  "variants": {
+    "workbuddy":    { "state": "signed-in", "domain": "www.workbuddy.cn" },
+    "workbuddy-ai": { "state": "signed-in", "domain": "www.workbuddy.ai" }
+  }
+}
+```
+
+也可以用 `wb-connect doctor` 一并检查登录状态与模型目录。
+
+### 移除自启
+
+```powershell
+Remove-Item "$([Environment]::GetFolderPath('Startup'))\wb-connect.lnk"
+```
+
+### 其他平台
+
+macOS 与 Linux 没有等价的启动文件夹。若需要这两个平台的常驻方案，请使用系统自带的服务管理器（macOS 用 `launchd` 的 `LaunchAgent`，Linux 用 `systemd --user`）。**这些配置本仓库未做实测**，请自行验证。
 
 ## 命令参考
 
